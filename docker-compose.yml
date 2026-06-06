@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: taskmanager
+      POSTGRES_USER: django
+      POSTGRES_PASSWORD: localdev123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U django"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://django:localdev123@db:5432/taskmanager
+      DJANGO_SECRET_KEY: local-dev-secret-change-me
+      DEBUG: "True"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "python manage.py migrate &&
+             gunicorn --bind 0.0.0.0:8000 --workers 2
+             --worker-tmp-dir /dev/shm taskmanager.wsgi:application"
+
+volumes:
+  postgres_data:
