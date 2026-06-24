@@ -1,0 +1,7 @@
+asgiref==3.11.1
+awscli-local==0.22.2
+dj-database-url==3.1.2
+Django==6.0.3
+localstack-client==2.11
+python-decouple==3.8
+sqlparse==0.5.5
