@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, pagination
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
@@ -7,13 +7,24 @@ from .models import Task
 from .serializers import TaskSerializer
 
 
+class PagePagination(pagination.PageNumberPagination):
+    page_size = 20
+
+
 class TaskViewSet(viewsets.ModelViewSet):
     serializer_class = TaskSerializer
+    pagination_class = PagePagination
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['status', 'priority']
 
     def get_queryset(self):
-        return Task.objects.filter(owner=self.request.user)
+        queryset = Task.objects.filter(owner=self.request.user)
+        search = self.request.query_params.get('search', None)
+        if search:
+            queryset = queryset.filter(
+                Q(title__icontains=search) | Q(description__icontains=search)
+            )
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)

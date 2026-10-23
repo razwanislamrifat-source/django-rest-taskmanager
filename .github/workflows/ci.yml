@@ -57,7 +57,7 @@ jobs:
         run: docker build -t scan-target .
 
       - name: Trivy scan
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.53.0
         with:
           image-ref: scan-target
           format: table

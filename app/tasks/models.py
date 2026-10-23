@@ -29,6 +29,14 @@ class Task(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', 'priority', '-created_at']),
+        ]
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.status == 'done':
+            self.delete()
 
     def __str__(self):
         return f"{self.title} ({self.owner.username})"

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task Manager</title>
+<style>
+  :root{--bg:#0b0c15;--card:#12132a;--text:#e6e6e6;--muted:#7a7a8a;--accent:#6ee7b7;--danger:#f87171;--warn:#fbbf24;}
+  *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,sans-serif}
+  body{background:var(--bg);color:var(--text);min-height:100vh;padding:2rem}
+  .wrap{max-width:720px;margin:0 auto}
+  h1{font-size:1.6rem;font-weight:600;letter-spacing:-0.02em;margin-bottom:1.5rem}
+  .card{background:var(--card);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem}
+  label{display:block;font-size:.75rem;color:var(--muted);margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.04em}
+  input,select{width:100%;padding:.55rem .65rem;background:#0b0c15;border:1px solid rgba(255,255,255,0.08);color:var(--text);border-radius:8px;font-size:.9rem;margin-bottom:.75rem}
+  input:focus,select:focus{outline:none;border-color:var(--accent)}
+  button{padding:.55rem 1rem;border-radius:8px;border:none;background:var(--accent);color:#0b0c15;font-weight:700;font-size:.85rem;cursor:pointer;transition:opacity .15s}
+  button:hover{opacity:.9}
+  .row{display:flex;gap:.5rem;align-items:center;justify-content:space-between}
+  .tasks{margin-top:1rem}
+  .task{border-bottom:1px solid rgba(255,255,255,0.05);padding:.75rem 0;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+  .task:last-child{border-bottom:none}
+  .task-title{font-weight:600;font-size:1rem}
+  .task-meta{font-size:.75rem;color:var(--muted)}
+  .badge{font-size:.7rem;padding:.15rem .45rem;border-radius:999px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);margin-left:.25rem}
+  .status-todo{color:#93c5fd}
+  .status-in_progress{color:#fbbf24}
+  .status-done{color:#6ee7b7;text-decoration:line-through;opacity:.7}
+  .filter-row{display:flex;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap;align-items:center}
+  .filter-row select{width:auto;margin-bottom:0}
+  .empty{color:var(--muted);font-size:.85rem;padding:.5rem 0}
+  .error{color:var(--danger);font-size:.8rem;margin-top:.25rem}
+  .login-section{max-width:320px;margin:4rem auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="login" class="login-section">
+    <h1>Task Manager</h1>
+    <div class="card">
+      <label for="user">Username</label>
+      <input id="user" placeholder="username" />
+      <label for="pass">Password</label>
+      <input id="pass" type="password" placeholder="password" />
+      <button onclick="doLogin()" style="width:100%;margin-top:.5rem">Login</button>
+      <div id="loginErr" class="error"></div>
+    </div>
+  </div>
+
+  <div id="app" style="display:none">
+    <h1>Task Manager</h1>
+
+    <div class="card">
+      <label>New Task</label>
+      <input id="newTitle" placeholder="Title" />
+      <input id="newDesc" placeholder="Description (optional)" />
+      <div class="row">
+        <select id="newStatus">
+          <option value="todo">To Do</option>
+          <option value="in_progress">In Progress</option>
+          <option value="done">Done</option>
+        </select>
+        <select id="newPriority">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+        <button onclick="createTask()">Add</button>
+      <div id="createMsg" class="error" style="margin-top:.5rem"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row filter-row">
+        <span style="color:var(--muted);font-size:.85rem">Filters</span>
+        <input id="fSearch" placeholder="Search tasks..." oninput="loadTasks()" style="width:160px;margin-bottom:0" />
+        <select id="fStatus" onchange="loadTasks()">
+          <option value="">All Status</option>
+          <option value="todo">To Do</option>
+          <option value="in_progress">In Progress</option>
+          <option value="done">Done</option>
+        </select>
+        <select id="fPriority" onchange="loadTasks()">
+          <option value="">All Priority</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+        <button onclick="loadTasks()">Refresh</button>
+      </div>
+      <div id="taskList" class="tasks"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:8000/api';
+let token = null;
+
+async function doLogin(){
+  const user = document.getElementById('user').value.trim();
+  const pass = document.getElementById('pass').value.trim();
+  document.getElementById('loginErr').textContent = '';
+  try{
+    const res = await fetch(API+'/auth/token/', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({username:user, password:pass})
+    });
+    if(!res.ok) throw new Error('Invalid credentials');
+    const data = await res.json();
+    token = data.access;
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadTasks();
+  }catch(e){ document.getElementById('loginErr').textContent = e.message; }
+}
+
+async function loadTasks(){
+  const status = document.getElementById('fStatus').value;
+  const priority = document.getElementById('fPriority').value;
+  let url = API+'/tasks/';
+  const search = document.getElementById('fSearch').value.trim();
+  const params = [];
+  if(status) params.push('status='+status);
+  if(priority) params.push('priority='+priority);
+  if(search) params.push('search='+encodeURIComponent(search));
+  if(params.length) url += '?' + params.join('&');
+  try{
+    const res = await fetch(url, { headers: {'Authorization':'Bearer '+token} });
+    if(res.status === 401){ token = null; document.getElementById('login').style.display='block'; document.getElementById('app').style.display='none'; return; }
+    const data = await res.json();
+    const results = data.results || data;
+    renderTasks(results);
+  }catch(e){ document.getElementById('taskList').innerHTML = '<div class="empty">Failed to load tasks</div>'; console.error(e); }
+}
+
+function renderTasks(tasks){
+  const el = document.getElementById('taskList');
+  if(!tasks || tasks.length === 0){ el.innerHTML = '<div class="empty">No tasks found</div>'; return; }
+  el.innerHTML = tasks.map(t => `
+    <div class="task">
+      <div>
+        <div class="task-title status-${t.status}">${t.title}</div>
+        <div class="task-meta">
+          <span class="badge">${t.priority}</span>
+          <span class="badge status-${t.status}">${t.status}</span>
+        </div>
+      </div>
+      <div style="font-size:.85rem;color:var(--muted)">${new Date(t.created_at).toLocaleString()}</div>
+    </div>`).join('');
+}
+
+async function createTask(){
+  const title = document.getElementById('newTitle').value.trim();
+  if(!title){ return; }
+  const body = {
+    title: title,
+    description: document.getElementById('newDesc').value.trim(),
+    status: document.getElementById('newStatus').value,
+    priority: document.getElementById('newPriority').value
+  };
+  try{
+    const res = await fetch(API+'/tasks/', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify(body)
+    });
+    if(res.ok){ document.getElementById('newTitle').value=''; document.getElementById('newDesc').value=''; document.getElementById('createMsg').textContent='Task added'; document.getElementById('createMsg').style.color='var(--accent)'; loadTasks(); }
+    else { const err = await res.json().catch(()=>{}); document.getElementById('createMsg').textContent = (err && (err.detail || JSON.stringify(err))) || 'Failed to add task'; document.getElementById('createMsg').style.color='var(--danger)'; }
+  }catch(e){ document.getElementById('createMsg').textContent = 'Network error'; document.getElementById('createMsg').style.color='var(--danger)'; }
+}
+</script>
+</body>
+</html>

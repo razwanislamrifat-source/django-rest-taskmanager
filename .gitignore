@@ -11,3 +11,4 @@ htmlcov/
 coverage.xml
 .coverage
 app/test.db
+.kilo/

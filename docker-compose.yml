@@ -24,10 +24,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: >
-      sh -c "python manage.py migrate &&
-             gunicorn --bind 0.0.0.0:8000 --workers 2
-             --worker-tmp-dir /dev/shm taskmanager.wsgi:application"
+    command: ["sh", "-c", "python manage.py migrate && gunicorn --bind 0.0.0.0:8000 --workers 2 --worker-tmp-dir /dev/shm --timeout 30 --access-logfile - taskmanager.wsgi:application"]
 
 volumes:
   postgres_data:
