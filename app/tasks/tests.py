@@ -1,7 +1,13 @@
+from django.core.cache import cache
 import pytest
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 from tasks.models import Task
+
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    cache.clear()
 
 
 @pytest.fixture
@@ -59,8 +65,8 @@ def test_user_only_sees_own_tasks(auth_client, user, other_user):
 
     response = auth_client.get('/api/tasks/')
     assert response.status_code == 200
-    assert len(response.data) == 1
-    assert response.data[0]['title'] == 'My task'
+    assert len(response.data['results']) == 1
+    assert response.data['results'][0]['title'] == 'My task'
 
 
 @pytest.mark.django_db
@@ -70,8 +76,8 @@ def test_filter_by_status(auth_client, user):
 
     response = auth_client.get('/api/tasks/?status=todo')
     assert response.status_code == 200
-    assert len(response.data) == 1
-    assert response.data[0]['status'] == 'todo'
+    assert len(response.data['results']) == 1
+    assert response.data['results'][0]['status'] == 'todo'
 
 
 @pytest.mark.django_db
@@ -82,8 +88,8 @@ def test_filter_by_priority(auth_client, user):
 
     response = auth_client.get('/api/tasks/?priority=high')
     assert response.status_code == 200
-    assert len(response.data) == 1
-    assert response.data[0]['priority'] == 'high'
+    assert len(response.data['results']) == 1
+    assert response.data['results'][0]['priority'] == 'high'
 
 
 @pytest.mark.django_db
