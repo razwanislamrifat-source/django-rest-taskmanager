@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
 
 class Task(models.Model):
@@ -26,6 +27,7 @@ class Task(models.Model):
     due_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -34,9 +36,12 @@ class Task(models.Model):
         ]
 
     def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
         if self.status == 'done':
-            self.delete()
+            if not self.completed_at:
+                self.completed_at = timezone.now()
+        else:
+            self.completed_at = None
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.title} ({self.owner.username})"

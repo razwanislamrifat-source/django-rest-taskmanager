@@ -118,3 +118,9 @@ def test_summary_endpoint_excludes_other_users_tasks(auth_client, user, other_us
     assert response.status_code == 200
     assert response.data['by_status']['todo'] == 1
     assert response.data['by_priority']['high'] == 1
+
+
+@pytest.mark.django_db
+def test_done_task_kept(user):
+    task = Task.objects.create(owner=user, title='Done task', status='done', priority='low')
+    assert Task.objects.filter(pk=task.pk).exists() is True

@@ -10,5 +10,5 @@ class RegisterAnonThrottle(AnonRateThrottle):
 
 class RegisterView(CreateAPIView):
     permission_classes = [AllowAny]
-    throttle_classes = [RegisterAnonThrottle]
+    throttle_scope = 'register'
     serializer_class = RegisterSerializer
