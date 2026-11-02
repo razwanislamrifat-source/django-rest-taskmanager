@@ -8,3 +8,4 @@ pytest-django==4.8.0
 flake8==7.0.0
 dj-database-url==2.1.0
 python-decouple==3.8
+whitenoise==6.12.0
